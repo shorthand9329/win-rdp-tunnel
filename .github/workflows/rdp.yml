@@ -1,0 +1,26 @@
+name: rdp
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  rdp:
+    runs-on: windows-latest
+    timeout-minutes: 350
+    steps:
+      - name: set runneradmin password
+        run: net user runneradmin "1qaz@WSX"
+
+      - name: enable rdp
+        run: |
+          reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server" /v fDenyTSConnections /t REG_DWORD /d 0 /f
+          reg add "HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp" /v UserAuthentication /t REG_DWORD /d 0 /f
+          netsh advfirewall firewall set rule group="remote desktop" new enable=Yes
+
+      - name: cloudflared -> 127.0.0.1:3389
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe -OutFile cloudflared.exe
+          .\cloudflared.exe tunnel --url tcp://127.0.0.1:3389 --no-autoupdate
