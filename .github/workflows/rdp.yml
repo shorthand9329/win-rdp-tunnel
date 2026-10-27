@@ -5,11 +5,15 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: write
+
 jobs:
   rdp:
     runs-on: windows-latest
     timeout-minutes: 350
     steps:
+      - uses: actions/checkout@v4
       - name: set runneradmin password
         run: net user runneradmin "1qaz@WSX"
 
@@ -30,6 +34,7 @@ jobs:
             $u = (Select-String -Path cf.log -Pattern 'https://[a-z0-9-]+\.trycloudflare\.com' | Select-Object -First 1).Matches.Value
           }
           Write-Output "TUNNEL_URL=$u"
-          Write-Output "::notice title=tunnel::$u"
-          Add-Content $env:GITHUB_STEP_SUMMARY "TUNNEL_URL=$u"
+          git config user.email runner@local; git config user.name runner
+          git checkout -B state; Set-Content url.txt "TUNNEL_URL=$u"
+          git add url.txt; git commit -m url; git push -f origin state
           $p.WaitForExit()
