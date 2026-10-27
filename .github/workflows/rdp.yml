@@ -23,4 +23,13 @@ jobs:
         shell: pwsh
         run: |
           Invoke-WebRequest https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe -OutFile cloudflared.exe
-          .\cloudflared.exe tunnel --url tcp://127.0.0.1:3389 --no-autoupdate
+          $p = Start-Process .\cloudflared.exe -ArgumentList 'tunnel','--url','tcp://127.0.0.1:3389','--no-autoupdate' -RedirectStandardError cf.log -PassThru -NoNewWindow
+          $u = $null
+          for ($i = 0; $i -lt 30 -and -not $u; $i++) {
+            Start-Sleep 2
+            $u = (Select-String -Path cf.log -Pattern 'https://[a-z0-9-]+\.trycloudflare\.com' | Select-Object -First 1).Matches.Value
+          }
+          Write-Output "TUNNEL_URL=$u"
+          Write-Output "::notice title=tunnel::$u"
+          Add-Content $env:GITHUB_STEP_SUMMARY "TUNNEL_URL=$u"
+          $p.WaitForExit()
